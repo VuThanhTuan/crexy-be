@@ -8,6 +8,7 @@ import { ProductSizesModule } from './modules/product-sizes/product-sizes.module
 import { MediaModule } from './modules/media/media.module';
 import { CategoryModule } from './modules/category/category.module';
 import { DiscountModule } from './modules/discount/discount.module';
+import { CollectionsModule } from './modules/collections/collections.module';
 
 @Module({
     imports: [
@@ -20,6 +21,7 @@ import { DiscountModule } from './modules/discount/discount.module';
         MediaModule,
         CategoryModule,
         DiscountModule,
+        CollectionsModule,
     ],
 })
 export class AppModule {}

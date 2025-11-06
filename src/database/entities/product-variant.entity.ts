@@ -26,6 +26,9 @@ export class ProductVariant extends AuditableEntity {
     @Column({ type: 'uuid', nullable: true, name: 'product_color_id' })
     productColorId: string;
 
+    @Column({ type: 'decimal', precision: 18, scale: 0, nullable: false, default: 0, name: 'price' })
+    price: number;
+
     @ManyToOne(() => Product, (product) => product.productVariants)
     @JoinColumn({ name: 'product_id' })
     product: Product;

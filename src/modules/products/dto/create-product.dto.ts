@@ -1,8 +1,9 @@
-import { IsString, IsNotEmpty, IsOptional, IsBoolean, IsUUID, IsArray, ValidateNested, ArrayMinSize } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsBoolean, IsUUID, IsArray, ValidateNested, ArrayMinSize, IsNumber, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { ProductMediaDto } from './product-media.dto';
 import { ProductVariantDto } from './product-variant.dto';
+import { ProductAttributeDto } from './product-attribute.dto';
 
 export class CreateProductDto {
     @ApiProperty({ description: 'Tên sản phẩm', example: 'Áo thun nam' })
@@ -33,6 +34,12 @@ export class CreateProductDto {
     @IsOptional()
     discountId?: string;
 
+    @ApiProperty({ description: 'Giá sản phẩm (VNĐ) - chỉ để hiển thị', example: 500000 })
+    @IsNumber()
+    @Min(0)
+    @IsNotEmpty({ message: 'Giá sản phẩm là bắt buộc' })
+    price: number;
+
     @ApiProperty({ 
         description: 'Danh sách media của sản phẩm (ít nhất 1 ảnh preview, tối đa 10 ảnh detail_list)',
         type: [ProductMediaDto],
@@ -60,4 +67,19 @@ export class CreateProductDto {
     @ValidateNested({ each: true })
     @Type(() => ProductVariantDto)
     variants: ProductVariantDto[];
+
+    @ApiPropertyOptional({ 
+        description: 'Danh sách thuộc tính sản phẩm (name-value)',
+        type: [ProductAttributeDto],
+        example: [
+            { name: 'Chất liệu', value: 'Vải cotton' },
+            { name: 'Xuất xứ', value: 'Việt Nam' },
+            { name: 'Thương hiệu', value: 'Crexy' }
+        ]
+    })
+    @IsArray()
+    @IsOptional()
+    @ValidateNested({ each: true })
+    @Type(() => ProductAttributeDto)
+    productAttributes?: ProductAttributeDto[];
 }

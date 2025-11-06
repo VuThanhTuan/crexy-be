@@ -3,6 +3,7 @@ import { DataSource } from 'typeorm';
 import { Product } from '@/database/entities/product.entity';
 import { ProductVariant } from '@/database/entities/product-variant.entity';
 import { ProductMedia } from '@/database/entities/product-media.entity';
+import { ProductAttribute } from '@/database/entities/product-attribute.entity';
 import { ProductSize } from '@/database/entities/product-size.entity';
 import { ProductColor } from '@/database/entities/product-color.entity';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -11,6 +12,7 @@ import { ProductQueryDto } from './dto/product-query.dto';
 import { ProductResponseDto, PaginatedProductResponseDto } from './dto/product-response.dto';
 import { ProductVariantDto } from './dto/product-variant.dto';
 import { ProductMediaDto } from './dto/product-media.dto';
+import { ProductAttributeDto } from './dto/product-attribute.dto';
 import { ProductRepository } from './products.repository';
 import { MEDIA_CATEGORY } from '@/common/consts/app';
 
@@ -37,6 +39,7 @@ export class ProductsService {
                     isActive: createProductDto.isActive ?? true,
                     categoryId: createProductDto.categoryId,
                     discountId: createProductDto.discountId,
+                    price: createProductDto.price,
                 });
                 const savedProduct = await queryRunner.manager.save(product);
 
@@ -63,6 +66,7 @@ export class ProductsService {
                             name: variantName,
                             description: variantDto.description,
                             isActive: variantDto.isActive ?? false,
+                            price: variantDto.price,
                         });
                     })
                 );
@@ -78,7 +82,19 @@ export class ProductsService {
                 });
                 await queryRunner.manager.save(mediaEntities);
 
-                // 4. Reload product with all relations using queryRunner.manager
+                // 4. Create product attributes if provided
+                if (createProductDto.productAttributes && createProductDto.productAttributes.length > 0) {
+                    const attributeEntities = createProductDto.productAttributes.map((attributeDto) => {
+                        return queryRunner.manager.create(ProductAttribute, {
+                            productId: savedProduct.id,
+                            name: attributeDto.name,
+                            value: attributeDto.value,
+                        });
+                    });
+                    await queryRunner.manager.save(attributeEntities);
+                }
+
+                // 5. Reload product with all relations using queryRunner.manager
                 const productWithRelations = await queryRunner.manager
                     .createQueryBuilder(Product, 'product')
                     .leftJoinAndSelect('product.category', 'category')
@@ -130,7 +146,7 @@ export class ProductsService {
 
             const existingVariant = existingVariantsMap.get(key);
 
-            if (existingVariant) {
+                if (existingVariant) {
                 // UPDATE: Variant already exists, update it
                 const updateData: any = {
                     isActive: variantDto.isActive ?? false,
@@ -151,6 +167,10 @@ export class ProductsService {
 
                 if (variantDto.description !== undefined) {
                     updateData.description = variantDto.description;
+                }
+
+                if (variantDto.price !== undefined) {
+                    updateData.price = variantDto.price;
                 }
 
                 await queryRunner.manager.update(ProductVariant, existingVariant.id, updateData);
@@ -174,6 +194,7 @@ export class ProductsService {
                     name: variantName,
                     description: variantDto.description,
                     isActive: variantDto.isActive ?? false,
+                    price: variantDto.price,
                 });
                 await queryRunner.manager.save(newVariant);
             }
@@ -242,6 +263,59 @@ export class ProductsService {
 
         if (mediaToDelete.length > 0) {
             await queryRunner.manager.delete(ProductMedia, mediaToDelete);
+        }
+    }
+
+    /**
+     * Smart update attributes: Compare old vs new, update/delete/insert accordingly
+     */
+    private async smartUpdateAttributes(
+        queryRunner: any,
+        productId: string,
+        existingAttributes: ProductAttribute[],
+        newAttributes: ProductAttributeDto[]
+    ): Promise<void> {
+        // Create lookup map for existing attributes by name + value
+        const existingAttributesMap = new Map<string, ProductAttribute>();
+        existingAttributes.forEach(attribute => {
+            const key = `${attribute.name}-${attribute.value}`;
+            existingAttributesMap.set(key, attribute);
+        });
+
+        // Track which attributes to keep
+        const attributesToKeep = new Set<string>();
+
+        // Process new attributes
+        for (const attributeDto of newAttributes) {
+            const key = `${attributeDto.name}-${attributeDto.value}`;
+            attributesToKeep.add(key);
+
+            const existingAttribute = existingAttributesMap.get(key);
+
+            if (existingAttribute) {
+                // Already exists, keep it (no need to update as name and value don't change)
+                continue;
+            } else {
+                // INSERT: New attribute, create it
+                const newAttribute = queryRunner.manager.create(ProductAttribute, {
+                    productId,
+                    name: attributeDto.name,
+                    value: attributeDto.value,
+                });
+                await queryRunner.manager.save(newAttribute);
+            }
+        }
+
+        // DELETE: Remove attributes that are no longer in the new list
+        const attributesToDelete = existingAttributes
+            .filter(attribute => {
+                const key = `${attribute.name}-${attribute.value}`;
+                return !attributesToKeep.has(key);
+            })
+            .map(attribute => attribute.id);
+
+        if (attributesToDelete.length > 0) {
+            await queryRunner.manager.delete(ProductAttribute, attributesToDelete);
         }
     }
 
@@ -350,6 +424,7 @@ export class ProductsService {
                 if (updateProductDto.description !== undefined) updateData.description = updateProductDto.description;
                 if (updateProductDto.isActive !== undefined) updateData.isActive = updateProductDto.isActive;
                 if (updateProductDto.categoryId !== undefined) updateData.categoryId = updateProductDto.categoryId;
+                if (updateProductDto.price !== undefined) updateData.price = updateProductDto.price;
                 
                 // Handle discountId: if explicitly passed (even as null), update it
                 if ('discountId' in updateProductDto) {
@@ -381,7 +456,22 @@ export class ProductsService {
                     );
                 }
 
-                // 4. Reload product with all relations
+                // 4. Smart update attributes if provided
+                if (updateProductDto.productAttributes !== undefined) {
+                    // If empty array, delete all attributes
+                    if (updateProductDto.productAttributes.length === 0) {
+                        await queryRunner.manager.delete(ProductAttribute, { productId: id });
+                    } else {
+                        await this.smartUpdateAttributes(
+                            queryRunner,
+                            id,
+                            existingProduct.productAttributes || [],
+                            updateProductDto.productAttributes
+                        );
+                    }
+                }
+
+                // 5. Reload product with all relations
                 const productWithRelations = await this.productRepository.findById(id);
                 if (!productWithRelations) {
                     throw new Error('Không thể tải sản phẩm sau khi cập nhật');
@@ -406,19 +496,6 @@ export class ProductsService {
         }
 
         return { message: 'Xóa sản phẩm thành công' };
-    }
-
-    /**
-     * EXAMPLE: Bulk create products with transaction
-     * All products will be created or none if any error occurs
-     */
-    async bulkCreate(products: CreateProductDto[]): Promise<ProductResponseDto[]> {
-        try {
-            const createdProducts = await this.productRepository.createMany(products);
-            return createdProducts.map(product => this.mapToResponseDto(product));
-        } catch (error) {
-            throw new BadRequestException('Không thể tạo sản phẩm hàng loạt: ' + error.message);
-        }
     }
 
     /**
@@ -450,6 +527,7 @@ export class ProductsService {
             isActive: product.isActive,
             categoryId: product.categoryId,
             discountId: product.discountId,
+            price: product.price,
             createdAt: product.createdAt,
             updatedAt: product.updatedAt,
             category: product.category ? {
@@ -470,6 +548,7 @@ export class ProductsService {
                 isActive: variant.isActive,
                 productSizeId: variant.productSizeId,
                 productColorId: variant.productColorId,
+                price: variant.price,
                 productSize: variant.productSize ? {
                     id: variant.productSize.id,
                     name: variant.productSize.name,
@@ -501,6 +580,13 @@ export class ProductsService {
                 } : undefined,
                 createdAt: media.createdAt,
                 updatedAt: media.updatedAt,
+            })),
+            productAttributes: product.productAttributes?.map(attribute => ({
+                id: attribute.id,
+                name: attribute.name,
+                value: attribute.value,
+                createdAt: attribute.createdAt,
+                updatedAt: attribute.updatedAt,
             })),
             primaryImage: (() => {
                 const primaryMedia = product.productMedia?.find(

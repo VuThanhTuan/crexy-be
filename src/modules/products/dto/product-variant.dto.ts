@@ -1,4 +1,4 @@
-import { IsUUID, IsBoolean, IsOptional, IsString } from 'class-validator';
+import { IsUUID, IsBoolean, IsOptional, IsString, IsNumber, Min, IsNotEmpty } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class ProductVariantDto {
@@ -42,5 +42,14 @@ export class ProductVariantDto {
     @IsString()
     @IsOptional()
     description?: string;
+
+    @ApiProperty({ 
+        description: 'Giá variant (VNĐ) - giá để tính tiền', 
+        example: 550000 
+    })
+    @IsNumber()
+    @Min(0)
+    @IsNotEmpty({ message: 'Giá variant là bắt buộc' })
+    price: number;
 }
 

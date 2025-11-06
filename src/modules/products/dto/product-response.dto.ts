@@ -19,6 +19,9 @@ export class ProductVariantResponseDto {
     @ApiPropertyOptional({ description: 'ID màu' })
     productColorId?: string;
 
+    @ApiProperty({ description: 'Giá variant (VNĐ) - giá để tính tiền' })
+    price: number;
+
     @ApiPropertyOptional({ description: 'Thông tin size' })
     productSize?: {
         id: string;
@@ -71,6 +74,23 @@ export class ProductMediaResponseDto {
     updatedAt: Date;
 }
 
+export class ProductAttributeResponseDto {
+    @ApiProperty({ description: 'ID thuộc tính' })
+    id: string;
+
+    @ApiProperty({ description: 'Tên thuộc tính (ví dụ: Chất liệu, Xuất xứ)' })
+    name: string;
+
+    @ApiProperty({ description: 'Giá trị thuộc tính (ví dụ: Vải cotton, Việt Nam)' })
+    value: string;
+
+    @ApiProperty({ description: 'Thời gian tạo' })
+    createdAt: Date;
+
+    @ApiProperty({ description: 'Thời gian cập nhật' })
+    updatedAt: Date;
+}
+
 export class ProductResponseDto {
     @ApiProperty({ description: 'ID sản phẩm' })
     id: string;
@@ -89,6 +109,9 @@ export class ProductResponseDto {
 
     @ApiProperty({ description: 'ID giảm giá' })
     discountId: string;
+
+    @ApiProperty({ description: 'Giá sản phẩm (VNĐ) - chỉ để hiển thị' })
+    price: number;
 
     @ApiProperty({ description: 'Thời gian tạo' })
     createdAt: Date;
@@ -116,6 +139,9 @@ export class ProductResponseDto {
 
     @ApiPropertyOptional({ description: 'Danh sách media', type: [ProductMediaResponseDto] })
     productMedia?: ProductMediaResponseDto[];
+
+    @ApiPropertyOptional({ description: 'Danh sách thuộc tính sản phẩm', type: [ProductAttributeResponseDto] })
+    productAttributes?: ProductAttributeResponseDto[];
 
     @ApiPropertyOptional({ description: 'Hình đại diện (media category: preview)' })
     primaryImage?: {
