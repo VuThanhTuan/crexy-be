@@ -56,6 +56,27 @@ export class ProductRepository extends BaseRepository<Product> {
     }
 
     /**
+     * Find latest published products (no pagination) limited by provided number
+     */
+    async findLatestPublished(limit = 4): Promise<Product[]> {
+        const queryBuilder = this.repository
+            .createQueryBuilder('product')
+            .leftJoinAndSelect('product.category', 'category')
+            .leftJoinAndSelect('product.discount', 'discount')
+            .leftJoinAndSelect('product.productMedia', 'productMedia')
+            .leftJoinAndSelect('productMedia.media', 'media')
+            .leftJoinAndSelect('product.productVariants', 'productVariants')
+            .leftJoinAndSelect('productVariants.productSize', 'productSize')
+            .leftJoinAndSelect('productVariants.productColor', 'productColor')
+            .leftJoinAndSelect('product.productAttributes', 'productAttributes')
+            .where('product.isActive = :isActive', { isActive: true })
+            .orderBy('product.createdAt', 'DESC')
+            .take(limit);
+
+        return await queryBuilder.getMany();
+    }
+
+    /**
      * Override base method to include relations
      */
     async findById(id: string): Promise<Product | null> {

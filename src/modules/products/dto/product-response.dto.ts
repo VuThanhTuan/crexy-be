@@ -140,8 +140,7 @@ export class ProductResponseDto {
     @ApiPropertyOptional({ description: 'Danh sách media', type: [ProductMediaResponseDto] })
     productMedia?: ProductMediaResponseDto[];
 
-    @ApiPropertyOptional({ description: 'Danh sách thuộc tính sản phẩm', type: [ProductAttributeResponseDto] })
-    productAttributes?: ProductAttributeResponseDto[];
+    
 
     @ApiPropertyOptional({ description: 'Hình đại diện (media category: preview)' })
     primaryImage?: {
@@ -155,6 +154,81 @@ export class ProductResponseDto {
         width?: number;
         height?: number;
     };
+    
+    @ApiPropertyOptional({ description: 'Hình phụ (media category: secondary)' })
+    secondaryImage?: {
+        id: string;
+        name: string;
+        originName: string;
+        url: string;
+        mediaType: string;
+        mimeType: string;
+        size?: number;
+        width?: number;
+        height?: number;
+    };
+    
+}
+
+export class ProductSummaryResponseDto {
+    @ApiProperty({ description: 'ID sản phẩm' })
+    id: string;
+
+    @ApiProperty({ description: 'Tên sản phẩm' })
+    name: string;
+
+    @ApiProperty({ description: 'Giá sản phẩm (VNĐ) - chỉ để hiển thị' })
+    price: number;
+
+    @ApiPropertyOptional({ description: 'Thông tin danh mục' })
+    category?: {
+        id: string;
+        name: string;
+        slug: string;
+    };
+
+    @ApiPropertyOptional({ description: 'Hình đại diện (media category: primary)' })
+    primaryImage?: {
+        id: string;
+        name: string;
+        originName: string;
+        url: string;
+        mediaType: string;
+        mimeType?: string;
+        size?: number;
+        width?: number;
+        height?: number;
+    };
+
+    @ApiPropertyOptional({ description: 'Hình phụ (media category: secondary)' })
+    secondaryImage?: {
+        id: string;
+        name: string;
+        originName: string;
+        url: string;
+        mediaType: string;
+        mimeType?: string;
+        size?: number;
+        width?: number;
+        height?: number;
+    };
+
+    @ApiPropertyOptional({ description: 'Thông tin giảm giá' })
+    discount?: {
+        id: string;
+        name: string;
+        discountValue: number;
+        discountType: string;
+    };
+
+    @ApiPropertyOptional({ description: 'Danh sách variants', type: [ProductVariantResponseDto] })
+    productVariants?: ProductVariantResponseDto[];
+
+    @ApiProperty({ description: 'Thời gian tạo' })
+    createdAt: Date;
+
+    @ApiProperty({ description: 'Thời gian cập nhật' })
+    updatedAt: Date;
 }
 
 export class PaginatedProductResponseDto {

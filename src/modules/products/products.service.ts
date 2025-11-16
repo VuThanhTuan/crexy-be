@@ -9,7 +9,7 @@ import { ProductColor } from '@/database/entities/product-color.entity';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductQueryDto } from './dto/product-query.dto';
-import { ProductResponseDto, PaginatedProductResponseDto } from './dto/product-response.dto';
+import { ProductResponseDto, PaginatedProductResponseDto, ProductSummaryResponseDto } from './dto/product-response.dto';
 import { ProductVariantDto } from './dto/product-variant.dto';
 import { ProductMediaDto } from './dto/product-media.dto';
 import { ProductAttributeDto } from './dto/product-attribute.dto';
@@ -394,6 +394,62 @@ export class ProductsService {
         return await this.findAll(publishedQuery);
     }
 
+    /**
+     * Public: get top latest published products (for homepage)
+     */
+    async findTopLatest(limit = 4): Promise<ProductSummaryResponseDto[]> {
+        const products = await this.productRepository.findLatestPublished(limit);
+        return products.map(product => {
+            const primaryMedia = product.productMedia?.find(
+                pm => pm.mediaCategory === MEDIA_CATEGORY.PRIMARY && pm.media
+            );
+            const secondaryMedia = product.productMedia?.find(
+                pm => pm.mediaCategory === MEDIA_CATEGORY.SECONDARY && pm.media
+            );
+
+            return {
+                id: product.id,
+                name: product.name,
+                price: product.price,
+                category: product.category ? {
+                    id: product.category.id,
+                    name: product.category.name,
+                    slug: product.category.slug,
+                } : undefined,
+                primaryImage: primaryMedia?.media ? {
+                    id: primaryMedia.media.id,
+                    name: primaryMedia.media.name,
+                    originName: primaryMedia.media.originName,
+                    url: primaryMedia.media.url,
+                    mediaType: primaryMedia.media.mediaType,
+                    mimeType: primaryMedia.media.mimeType,
+                    size: primaryMedia.media.size,
+                    width: primaryMedia.media.width,
+                    height: primaryMedia.media.height,
+                } : undefined,
+                secondaryImage: secondaryMedia?.media ? {
+                    id: secondaryMedia.media.id,
+                    name: secondaryMedia.media.name,
+                    originName: secondaryMedia.media.originName,
+                    url: secondaryMedia.media.url,
+                    mediaType: secondaryMedia.media.mediaType,
+                    mimeType: secondaryMedia.media.mimeType,
+                    size: secondaryMedia.media.size,
+                    width: secondaryMedia.media.width,
+                    height: secondaryMedia.media.height,
+                } : undefined,
+                discount: product.discount ? {
+                    id: product.discount.id,
+                    name: product.discount.name,
+                    discountValue: product.discount.discountValue,
+                    discountType: product.discount.discountType,
+                } : undefined,
+                createdAt: product.createdAt,
+                updatedAt: product.updatedAt,
+            } as ProductSummaryResponseDto;
+        });
+    }
+
     async update(id: string, updateProductDto: UpdateProductDto): Promise<ProductResponseDto> {
         // Check if product exists
         const existingProduct = await this.productRepository.findById(id);
@@ -581,13 +637,7 @@ export class ProductsService {
                 createdAt: media.createdAt,
                 updatedAt: media.updatedAt,
             })),
-            productAttributes: product.productAttributes?.map(attribute => ({
-                id: attribute.id,
-                name: attribute.name,
-                value: attribute.value,
-                createdAt: attribute.createdAt,
-                updatedAt: attribute.updatedAt,
-            })),
+            
             primaryImage: (() => {
                 const primaryMedia = product.productMedia?.find(
                     pm => pm.mediaCategory === MEDIA_CATEGORY.PRIMARY && pm.media
@@ -602,6 +652,22 @@ export class ProductsService {
                     size: primaryMedia.media.size,
                     width: primaryMedia.media.width,
                     height: primaryMedia.media.height,
+                } : undefined;
+            })(),
+            secondaryImage: (() => {
+                const secondaryMedia = product.productMedia?.find(
+                    pm => pm.mediaCategory === MEDIA_CATEGORY.SECONDARY && pm.media
+                );
+                return secondaryMedia?.media ? {
+                    id: secondaryMedia.media.id,
+                    name: secondaryMedia.media.name,
+                    originName: secondaryMedia.media.originName,
+                    url: secondaryMedia.media.url,
+                    mediaType: secondaryMedia.media.mediaType,
+                    mimeType: secondaryMedia.media.mimeType,
+                    size: secondaryMedia.media.size,
+                    width: secondaryMedia.media.width,
+                    height: secondaryMedia.media.height,
                 } : undefined;
             })(),
         };
