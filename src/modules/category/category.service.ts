@@ -64,6 +64,17 @@ export class CategoryService {
         };
     }
 
+    /**
+     * Public endpoint: get all categories without pagination, ordered by createdAt desc then name asc
+     */
+    async findAllForUser(): Promise<CategoryResponseDto[]> {
+        const categories = await this.categoryRepository.findAllNoPagination();
+        const data = await Promise.all(
+            categories.map(category => this.mapToResponseDto(category))
+        );
+        return data;
+    }
+
     async findOne(id: string): Promise<CategoryResponseDto> {
         const category = await this.categoryRepository.findByIdWithRelations(id);
 

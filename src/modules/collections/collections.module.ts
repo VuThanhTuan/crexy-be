@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CollectionsService } from './collections.service';
 import { AdminCollectionsController } from './admin-collections.controller';
+import { UserCollectionsController } from './user-collections.controller';
 import { CollectionRepository } from './collections.repository';
 import { Collection } from '@/database/entities/colection.entity';
 import { ProductCollection } from '@/database/entities/product-collection.entity';
@@ -15,7 +16,7 @@ import { Product } from '@/database/entities/product.entity';
             Product,
         ]),
     ],
-    controllers: [AdminCollectionsController],
+    controllers: [AdminCollectionsController, UserCollectionsController],
     providers: [CollectionRepository, CollectionsService],
     exports: [CollectionsService, CollectionRepository],
 })

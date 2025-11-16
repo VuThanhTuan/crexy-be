@@ -57,6 +57,20 @@ export class CategoryRepository extends BaseRepository<Category> {
     }
 
     /**
+     * Get all categories without pagination, including relations, ordered by createdAt desc then name asc
+     */
+    async findAllNoPagination(): Promise<Category[]> {
+        const queryBuilder = this.repository
+            .createQueryBuilder('category')
+            .leftJoinAndSelect('category.parent', 'parent')
+            .leftJoinAndSelect('category.childrens', 'children')
+            .orderBy('category.createdAt', 'DESC')
+            .addOrderBy('category.name', 'ASC');
+
+        return await queryBuilder.getMany();
+    }
+
+    /**
      * Find category by slug
      */
     async findBySlug(slug: string): Promise<Category | null> {

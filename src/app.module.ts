@@ -9,9 +9,11 @@ import { MediaModule } from './modules/media/media.module';
 import { CategoryModule } from './modules/category/category.module';
 import { DiscountModule } from './modules/discount/discount.module';
 import { CollectionsModule } from './modules/collections/collections.module';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
     imports: [
+        ConfigModule.forRoot({ isGlobal: true }),
         DatabaseModule,
         AuthModule,
         UserModule,
@@ -25,3 +27,4 @@ import { CollectionsModule } from './modules/collections/collections.module';
     ],
 })
 export class AppModule {}
+

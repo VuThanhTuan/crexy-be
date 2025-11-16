@@ -10,10 +10,22 @@ export class UserRepository extends BaseRepository<User> {
     }
 
     /**
-     * Find user by username
+     * Find user by email
      */
-    async findByUserName(userName: string): Promise<User | null> {
-        return await this.repository.findOne({ where: { userName } });
+    async findByEmail(email: string): Promise<User | null> {
+        return await this.repository.findOne({ where: { email } });
+    }
+
+    /**
+     * Find user by identity ID and provider
+     */
+    async findByIdentityIdAndProvider(
+        identityId: string,
+        provider: string,
+    ): Promise<User | null> {
+        return await this.repository.findOne({
+            where: { identityId, provider },
+        });
     }
 
     /**

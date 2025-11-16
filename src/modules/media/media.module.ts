@@ -10,7 +10,6 @@ import { Media } from '@/database/entities/media.entity';
 @Module({
     imports: [
         TypeOrmModule.forFeature([Media]),
-        ConfigModule,
     ],
     controllers: [AdminMediaController],
     providers: [MediaRepository, MediaService, AwsS3Service],

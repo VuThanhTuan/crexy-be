@@ -91,6 +91,85 @@ export class CollectionsService {
         return this.mapToResponseDto(collection);
     }
 
+    /**
+     * Public: get top collections for menu (no pagination)
+     */
+    async findTopForMenu(limit = 5): Promise<CollectionResponseDto[]> {
+        const collections = await this.collectionRepository.findTop(limit);
+        // For menu we don't include product list, but include productCount
+        const data = await Promise.all(collections.map(async (c) => {
+            const productCount = await this.collectionRepository.countProducts(c.id);
+            return {
+                id: c.id,
+                name: c.name,
+                description: c.description || undefined,
+                slug: c.slug || undefined,
+                media: c.media ? {
+                    id: c.media.id,
+                    name: c.media.name,
+                    url: c.media.url,
+                    mimeType: c.media.mimeType || undefined,
+                } : undefined,
+                products: undefined,
+                productCount,
+                createdAt: c.createdAt,
+                updatedAt: c.updatedAt,
+            } as CollectionResponseDto;
+        }));
+
+        return data;
+    }
+
+    /**
+     * Public: paginated list for users (no products in items)
+     */
+    async findAllForUser(query: CollectionQueryDto): Promise<PaginatedCollectionResponseDto> {
+        const [collections, total] = await this.collectionRepository.findWithFiltersForList(query);
+
+        const page = query.page || 1;
+        const limit = query.limit || 10;
+        const totalPages = Math.ceil(total / limit);
+
+        const data = await Promise.all(collections.map(async (c) => {
+            const productCount = await this.collectionRepository.countProducts(c.id);
+            return {
+                id: c.id,
+                name: c.name,
+                description: c.description || undefined,
+                slug: c.slug || undefined,
+                media: c.media ? {
+                    id: c.media.id,
+                    name: c.media.name,
+                    url: c.media.url,
+                    mimeType: c.media.mimeType || undefined,
+                } : undefined,
+                products: undefined,
+                productCount,
+                createdAt: c.createdAt,
+                updatedAt: c.updatedAt,
+            } as CollectionResponseDto;
+        }));
+
+        return {
+            data,
+            total,
+            page,
+            limit,
+            totalPages,
+        };
+    }
+
+    /**
+     * Find collection detail by slug (includes products)
+     */
+    async findOneBySlug(slug: string): Promise<CollectionResponseDto> {
+        const collection = await this.collectionRepository.findBySlug(slug);
+        if (!collection) {
+            throw new NotFoundException('Không tìm thấy bộ sưu tập');
+        }
+        return this.mapToResponseDto(collection);
+    }
+
     async update(id: string, updateCollectionDto: UpdateCollectionDto): Promise<CollectionResponseDto> {
         const collection = await this.collectionRepository.findById(id);
         if (!collection) {

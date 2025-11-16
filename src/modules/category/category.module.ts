@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CategoryService } from './category.service';
 import { AdminCategoryController } from './admin-category.controller';
+import { UserCategoryController } from './user-category.controller';
 import { CategoryRepository } from './category.repository';
 import { Category } from '@/database/entities/category.entity';
 
@@ -9,7 +10,7 @@ import { Category } from '@/database/entities/category.entity';
     imports: [
         TypeOrmModule.forFeature([Category]),
     ],
-    controllers: [AdminCategoryController],
+    controllers: [AdminCategoryController, UserCategoryController],
     providers: [CategoryRepository, CategoryService],
     exports: [CategoryService, CategoryRepository],
 })

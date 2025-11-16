@@ -8,10 +8,16 @@ export class User extends AuditableEntity {
     @Column({ type: 'varchar', nullable: true, name: 'identity_id' })
     identityId: string;
 
-    @Column({ type: 'varchar', length: 255, name: 'user_name' })
-    userName: string;
+    @Column({ type: 'varchar', length: 50, default: 'local', name: 'provider' })
+    provider: string;
 
-    @Column({ type: 'varchar', length: 500, name: 'password' })
+    @Column({ type: 'varchar', length: 255, unique: true, name: 'email' })
+    email: string;
+
+    @Column({ type: 'varchar', length: 255, name: 'fullname' })
+    fullname: string;
+
+    @Column({ type: 'varchar', length: 500, nullable: true, name: 'password' })
     password: string;
 
     @Column({ type: 'boolean', default: false, name: 'is_staff' })
@@ -22,4 +28,13 @@ export class User extends AuditableEntity {
 
     @Column({ type: 'varchar', length: 50, nullable: true, name: 'phone_number' })
     phoneNumber: string;
+
+    @Column({ type: 'text', nullable: true, name: 'address' })
+    address: string;
+
+    @Column({ type: 'text', nullable: true, name: 'avatar' })
+    avatar: string;
+
+    @Column({ type: 'boolean', default: false, name: 'email_verified' })
+    emailVerified: boolean;
 }
