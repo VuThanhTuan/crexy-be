@@ -58,7 +58,7 @@ export class ProductRepository extends BaseRepository<Product> {
     /**
      * Find latest published products (no pagination) limited by provided number
      */
-    async findLatestPublished(limit = 4): Promise<Product[]> {
+    async findLatestPublished(limit = 4, categoryId?: string): Promise<Product[]> {
         const queryBuilder = this.repository
             .createQueryBuilder('product')
             .leftJoinAndSelect('product.category', 'category')
@@ -72,6 +72,10 @@ export class ProductRepository extends BaseRepository<Product> {
             .where('product.isActive = :isActive', { isActive: true })
             .orderBy('product.createdAt', 'DESC')
             .take(limit);
+
+        if (categoryId) {
+            queryBuilder.andWhere('product.categoryId = :categoryId', { categoryId });
+        }
 
         return await queryBuilder.getMany();
     }

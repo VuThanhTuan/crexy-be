@@ -397,8 +397,8 @@ export class ProductsService {
     /**
      * Public: get top latest published products (for homepage)
      */
-    async findTopLatest(limit = 4): Promise<ProductSummaryResponseDto[]> {
-        const products = await this.productRepository.findLatestPublished(limit);
+    async findTopLatest(limit = 4, categoryId?: string): Promise<ProductSummaryResponseDto[]> {
+        const products = await this.productRepository.findLatestPublished(limit, categoryId);
         return products.map(product => {
             const primaryMedia = product.productMedia?.find(
                 pm => pm.mediaCategory === MEDIA_CATEGORY.PRIMARY && pm.media

@@ -17,12 +17,13 @@ export class ProductsController {
     }
 
     @Get('top')
-    @ApiOperation({ summary: 'Lấy danh sách sản phẩm mới nhất để hiển thị trên trang chủ' })
+    @ApiOperation({ summary: 'Lấy danh sách sản phẩm mới nhất (có thể lọc theo danh mục) để hiển thị hoặc gợi ý liên quan' })
     @ApiResponse({ status: 200, description: 'Danh sách sản phẩm mới nhất', type: [ProductSummaryResponseDto] })
     async top(
         @Query('limit', new DefaultValuePipe(4), ParseIntPipe) limit: number,
+        @Query('categoryId') categoryId?: string,
     ): Promise<ProductSummaryResponseDto[]> {
-        return await this.productsService.findTopLatest(limit);
+        return await this.productsService.findTopLatest(limit, categoryId);
     }
 
     @Get(':id')
