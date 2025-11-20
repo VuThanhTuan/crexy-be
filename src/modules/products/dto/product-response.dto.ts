@@ -91,6 +91,7 @@ export class ProductAttributeResponseDto {
     updatedAt: Date;
 }
 
+
 export class ProductResponseDto {
     @ApiProperty({ description: 'ID sản phẩm' })
     id: string;
@@ -137,8 +138,12 @@ export class ProductResponseDto {
     @ApiPropertyOptional({ description: 'Danh sách variants', type: [ProductVariantResponseDto] })
     productVariants?: ProductVariantResponseDto[];
 
+
     @ApiPropertyOptional({ description: 'Danh sách media', type: [ProductMediaResponseDto] })
     productMedia?: ProductMediaResponseDto[];
+
+    @ApiPropertyOptional({ description: 'Danh sách thuộc tính sản phẩm', type: [ProductAttributeResponseDto] })
+    productAttributes?: ProductAttributeResponseDto[];
 
     
 

@@ -670,6 +670,15 @@ export class ProductsService {
                     height: secondaryMedia.media.height,
                 } : undefined;
             })(),
+
+            // Ensure productAttributes is included in the response
+            productAttributes: product.productAttributes?.map(attr => ({
+                id: attr.id,
+                name: attr.name,
+                value: attr.value,
+                createdAt: attr.createdAt,
+                updatedAt: attr.updatedAt,
+            })),
         };
     }
 }
