@@ -30,6 +30,9 @@ export class ProductRepository extends BaseRepository<Product> {
             .leftJoinAndSelect('product.discount', 'discount')
             .leftJoinAndSelect('product.productMedia', 'productMedia')
             .leftJoinAndSelect('productMedia.media', 'media')
+            .leftJoinAndSelect('product.productVariants', 'productVariants')
+            .leftJoinAndSelect('productVariants.productSize', 'productSize')
+            .leftJoinAndSelect('productVariants.productColor', 'productColor')
             .leftJoinAndSelect('product.productAttributes', 'productAttributes');
 
         // Apply filters

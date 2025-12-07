@@ -444,6 +444,28 @@ export class ProductsService {
                     discountValue: product.discount.discountValue,
                     discountType: product.discount.discountType,
                 } : undefined,
+                productVariants: product.productVariants?.map(variant => ({
+                    id: variant.id,
+                    name: variant.name,
+                    description: variant.description,
+                    isActive: variant.isActive,
+                    productSizeId: variant.productSizeId,
+                    productColorId: variant.productColorId,
+                    price: variant.price,
+                    productSize: variant.productSize ? {
+                        id: variant.productSize.id,
+                        name: variant.productSize.name,
+                        description: variant.productSize.description,
+                    } : undefined,
+                    productColor: variant.productColor ? {
+                        id: variant.productColor.id,
+                        name: variant.productColor.name,
+                        colorCode: variant.productColor.colorCode,
+                        description: variant.productColor.description,
+                    } : undefined,
+                    createdAt: variant.createdAt,
+                    updatedAt: variant.updatedAt,
+                })),
                 createdAt: product.createdAt,
                 updatedAt: product.updatedAt,
             } as ProductSummaryResponseDto;
