@@ -18,29 +18,50 @@ export abstract class BaseRepository<Entity extends ObjectLiteral> {
 
     /**
      * Find all entities
+     * @param queryRunner - Optional. Use this when called inside a transaction
      */
-    async findAll(): Promise<Entity[]> {
+    async findAll(queryRunner?: QueryRunner): Promise<Entity[]> {
+        if (queryRunner) {
+            return await queryRunner.manager.find(this.entityClass);
+        }
         return await this.repository.find();
     }
 
     /**
      * Find one entity by ID
+     * @param id - Entity ID
+     * @param queryRunner - Optional. Use this when called inside a transaction
      */
-    async findById(id: string | number): Promise<Entity | null> {
+    async findById(id: string | number, queryRunner?: QueryRunner): Promise<Entity | null> {
+        if (queryRunner) {
+            return await queryRunner.manager.findOne(this.entityClass, { 
+                where: { id } as any 
+            });
+        }
         return await this.repository.findOne({ where: { id } as any });
     }
 
     /**
      * Find one entity by conditions
+     * @param where - Find conditions
+     * @param queryRunner - Optional. Use this when called inside a transaction
      */
-    async findOne(where: FindOptionsWhere<Entity>): Promise<Entity | null> {
+    async findOne(where: FindOptionsWhere<Entity>, queryRunner?: QueryRunner): Promise<Entity | null> {
+        if (queryRunner) {
+            return await queryRunner.manager.findOne(this.entityClass, { where });
+        }
         return await this.repository.findOne({ where });
     }
 
     /**
      * Find entities by conditions
+     * @param where - Find conditions
+     * @param queryRunner - Optional. Use this when called inside a transaction
      */
-    async findBy(where: FindOptionsWhere<Entity>): Promise<Entity[]> {
+    async findBy(where: FindOptionsWhere<Entity>, queryRunner?: QueryRunner): Promise<Entity[]> {
+        if (queryRunner) {
+            return await queryRunner.manager.findBy(this.entityClass, where);
+        }
         return await this.repository.findBy(where);
     }
 
@@ -70,31 +91,52 @@ export abstract class BaseRepository<Entity extends ObjectLiteral> {
 
     /**
      * Check if entity exists by ID
+     * @param id - Entity ID
+     * @param queryRunner - Optional. Use this when called inside a transaction
      */
-    async exists(id: string | number): Promise<boolean> {
+    async exists(id: string | number, queryRunner?: QueryRunner): Promise<boolean> {
+        if (queryRunner) {
+            const count = await queryRunner.manager.count(this.entityClass, { where: { id } as any });
+            return count > 0;
+        }
         const count = await this.repository.count({ where: { id } as any });
         return count > 0;
     }
 
     /**
      * Check if entity exists by conditions
+     * @param where - Find conditions
+     * @param queryRunner - Optional. Use this when called inside a transaction
      */
-    async existsBy(where: FindOptionsWhere<Entity>): Promise<boolean> {
+    async existsBy(where: FindOptionsWhere<Entity>, queryRunner?: QueryRunner): Promise<boolean> {
+        if (queryRunner) {
+            const count = await queryRunner.manager.countBy(this.entityClass, where);
+            return count > 0;
+        }
         const count = await this.repository.countBy(where);
         return count > 0;
     }
 
     /**
      * Count all entities
+     * @param queryRunner - Optional. Use this when called inside a transaction
      */
-    async count(): Promise<number> {
+    async count(queryRunner?: QueryRunner): Promise<number> {
+        if (queryRunner) {
+            return await queryRunner.manager.count(this.entityClass);
+        }
         return await this.repository.count();
     }
 
     /**
      * Count entities by conditions
+     * @param where - Find conditions
+     * @param queryRunner - Optional. Use this when called inside a transaction
      */
-    async countBy(where: FindOptionsWhere<Entity>): Promise<number> {
+    async countBy(where: FindOptionsWhere<Entity>, queryRunner?: QueryRunner): Promise<number> {
+        if (queryRunner) {
+            return await queryRunner.manager.countBy(this.entityClass, where);
+        }
         return await this.repository.countBy(where);
     }
 
