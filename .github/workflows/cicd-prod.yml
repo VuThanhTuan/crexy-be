@@ -1,0 +1,242 @@
+# =============================================================================
+# GITHUB ACTIONS - Backend Production CI/CD
+# =============================================================================
+# Workflow này chỉ chạy cho PRODUCTION environment
+# Trigger: Tạo Release với tag (v1.0.0, v1.0.1, etc.)
+
+name: 🚀 Deploy Backend to Production
+
+# =============================================================================
+# TRIGGERS
+# =============================================================================
+on:
+  release:
+    types: [published]
+  
+  # Manual trigger với version
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v1.0.0)'
+        required: true
+        type: string
+
+# =============================================================================
+# ENVIRONMENT VARIABLES
+# =============================================================================
+env:
+  AWS_REGION: ap-southeast-1
+  AWS_ACCOUNT_ID: 123456789012
+  ECR_REPOSITORY: crexy-backend
+  INFRA_REPO: your-username/crexy-infrastructure
+  ENVIRONMENT: production
+
+# =============================================================================
+# JOBS
+# =============================================================================
+jobs:
+  # ---------------------------------------------------------------------------
+  # JOB 1: Validate Version
+  # ---------------------------------------------------------------------------
+  validate:
+    name: ✅ Validate Release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    
+    steps:
+      - name: 🏷️ Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "release" ]; then
+            VERSION="${{ github.event.release.tag_name }}"
+          else
+            VERSION="${{ github.event.inputs.version }}"
+          fi
+          
+          # Validate semantic version format
+          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Invalid version: $VERSION"
+            echo "Must be semantic version (e.g., v1.0.0)"
+            exit 1
+          fi
+          
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "✅ Version: $VERSION"
+
+  # ---------------------------------------------------------------------------
+  # JOB 2: Run Tests (Strict for Production)
+  # ---------------------------------------------------------------------------
+  test:
+    name: 🧪 Test & Security Scan
+    runs-on: ubuntu-latest
+    needs: [validate]
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.validate.outputs.version }}
+      
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: 📦 Install dependencies
+        run: npm ci
+      
+      - name: 🔍 Run linter
+        run: npm run lint
+      
+      - name: 🧪 Run tests
+        run: npm test
+      
+      # Optional: Security scan
+      # - name: 🔒 Security audit
+      #   run: npm audit --audit-level=high
+
+  # ---------------------------------------------------------------------------
+  # JOB 3: Build & Push Production Image
+  # ---------------------------------------------------------------------------
+  build-and-push:
+    name: 🏗️ Build Production Image
+    runs-on: ubuntu-latest
+    needs: [validate, test]
+    
+    outputs:
+      image_full: ${{ steps.image.outputs.full }}
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.validate.outputs.version }}
+      
+      - name: 🏷️ Set image name
+        id: image
+        run: |
+          VERSION="${{ needs.validate.outputs.version }}"
+          REGISTRY="${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com"
+          FULL_IMAGE="$REGISTRY/${{ env.ECR_REPOSITORY }}:$VERSION"
+          
+          echo "full=$FULL_IMAGE" >> $GITHUB_OUTPUT
+          echo "📦 Production Image: $FULL_IMAGE"
+      
+      - name: 🔑 Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: 🔐 Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+      
+      - name: 🐳 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: 🏗️ Build and push production image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ steps.image.outputs.full }}
+            ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:release-latest
+            ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NODE_ENV=production
+            VERSION=${{ needs.validate.outputs.version }}
+      
+      - name: ✅ Build summary
+        run: |
+          echo "## 🎉 Production Build Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ needs.validate.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** \`${{ steps.image.outputs.full }}\`" >> $GITHUB_STEP_SUMMARY
+
+  # ---------------------------------------------------------------------------
+  # JOB 4: Update Production Infrastructure
+  # ---------------------------------------------------------------------------
+  update-gitops:
+    name: 📝 Update Production Config
+    runs-on: ubuntu-latest
+    needs: [validate, build-and-push]
+    
+    # Production environment protection
+    environment: production
+    
+    steps:
+      - name: 📥 Checkout infrastructure repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.INFRA_REPO }}
+          token: ${{ secrets.GITOPS_TOKEN }}
+          path: infra
+      
+      - name: 📝 Update production image
+        run: |
+          cd infra/overlays/production
+          
+          VERSION="${{ needs.validate.outputs.version }}"
+          
+          # Update newTag cho backend
+          sed -i "/name: crexy-backend/,/newTag:/ s|newTag: .*|newTag: $VERSION|" kustomization.yaml
+          
+          echo "✅ Updated production to: $VERSION"
+          cat kustomization.yaml
+      
+      - name: 💾 Commit and push
+        run: |
+          cd infra
+          
+          git config user.name "GitHub Actions Bot"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git add overlays/production/kustomization.yaml
+          
+          git commit -m "🚀 [PRODUCTION] Release backend ${{ needs.validate.outputs.version }}" \
+                     -m "Release: ${{ github.repository }}@${{ needs.validate.outputs.version }}" \
+                     -m "Author: ${{ github.actor }}" || {
+            echo "ℹ️ No changes"
+            exit 0
+          }
+          
+          git push
+          
+          echo "✅ Updated production infrastructure"
+      
+      - name: 📢 Deployment summary
+        run: |
+          echo "## 🚀 Production Deployment!" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ needs.validate.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** \`${{ needs.build-and-push.outputs.image_full }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "⏳ ArgoCD is syncing to production..." >> $GITHUB_STEP_SUMMARY
+          echo "🔗 Monitor: ArgoCD Dashboard" >> $GITHUB_STEP_SUMMARY
+
+  # ---------------------------------------------------------------------------
+  # JOB 5: Notification (Optional)
+  # ---------------------------------------------------------------------------
+  notify:
+    name: 📢 Notify Team
+    runs-on: ubuntu-latest
+    needs: [validate, update-gitops]
+    if: always()
+    
+    steps:
+      - name: 📢 Send notification
+        run: |
+          STATUS="${{ needs.update-gitops.result }}"
+          VERSION="${{ needs.validate.outputs.version }}"
+          
+          echo "🔔 Notification: Production deployment $STATUS"
+          echo "Version: $VERSION"
+          
+          # TODO: Integrate với Slack, Discord, Email, etc.
+          # curl -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
+          #   -d "{'text': 'Production deployed: $VERSION - $STATUS'}"

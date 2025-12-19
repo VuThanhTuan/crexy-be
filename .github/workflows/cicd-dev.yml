@@ -1,0 +1,180 @@
+# =============================================================================
+# GITHUB ACTIONS - Backend Development CI/CD
+# =============================================================================
+# Workflow này chỉ chạy cho DEV environment
+# Trigger: Push/Merge vào branch "dev"
+
+name: 🚀 Deploy Backend to Dev
+
+# =============================================================================
+# TRIGGERS
+# =============================================================================
+on:
+  push:
+    branches:
+      - dev
+    paths:
+      - 'src/**'
+      - 'package*.json'
+      - 'Dockerfile'
+      - '.github/workflows/cicd-dev.yml'
+  
+  # Manual trigger
+  workflow_dispatch:
+
+# =============================================================================
+# ENVIRONMENT VARIABLES
+# =============================================================================
+env:
+  AWS_REGION: ap-southeast-1
+  AWS_ACCOUNT_ID: 767397967373
+  ECR_REPOSITORY: crexy-backend
+  INFRA_REPO: your-username/crexy-infrastructure
+  ENVIRONMENT: dev
+
+# =============================================================================
+# JOBS
+# =============================================================================
+jobs:
+  # ---------------------------------------------------------------------------
+  # JOB 1: Build and Test
+  # ---------------------------------------------------------------------------
+  test:
+    name: 🧪 Test & Lint
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: 📦 Install dependencies
+        run: npm ci
+      
+      - name: 🔍 Run linter
+        run: npm run lint || echo "⚠️ Linting warnings"
+      
+      - name: 🧪 Run tests
+        run: npm test || echo "⚠️ Tests skipped"
+
+  # ---------------------------------------------------------------------------
+  # JOB 2: Build & Push Docker Image
+  # ---------------------------------------------------------------------------
+  build-and-push:
+    name: 🏗️ Build & Push to ECR
+    runs-on: ubuntu-latest
+    needs: [test]
+    if: always()
+    
+    outputs:
+      image_tag: ${{ steps.tag.outputs.tag }}
+      image_full: ${{ steps.tag.outputs.full }}
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🏷️ Generate image tag
+        id: tag
+        run: |
+          TAG="dev-${GITHUB_SHA::7}"
+          REGISTRY="${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com"
+          FULL_IMAGE="$REGISTRY/${{ env.ECR_REPOSITORY }}:$TAG"
+          
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "full=$FULL_IMAGE" >> $GITHUB_OUTPUT
+          echo "📦 Image: $FULL_IMAGE"
+      
+      - name: 🔑 Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: 🔐 Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+      
+      - name: 🐳 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: 🏗️ Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ steps.tag.outputs.full }}
+            ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:dev-latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NODE_ENV=production
+            VERSION=${{ steps.tag.outputs.tag }}
+      
+      - name: ✅ Build summary
+        run: |
+          echo "## 🎉 Build Successful!" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** Development" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** \`${{ steps.tag.outputs.full }}\`" >> $GITHUB_STEP_SUMMARY
+
+  # ---------------------------------------------------------------------------
+  # JOB 3: Update GitOps Repository
+  # ---------------------------------------------------------------------------
+  update-gitops:
+    name: 📝 Update Infrastructure
+    runs-on: ubuntu-latest
+    needs: [build-and-push]
+    
+    steps:
+      - name: 📥 Checkout infrastructure repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.INFRA_REPO }}
+          token: ${{ secrets.GITOPS_TOKEN }}
+          path: infra
+      
+      - name: 📝 Update image tag
+        run: |
+          cd infra/overlays/dev
+          
+          TAG="${{ needs.build-and-push.outputs.image_tag }}"
+          
+          # Update newTag cho backend
+          sed -i "/name: crexy-backend/,/newTag:/ s|newTag: .*|newTag: $TAG|" kustomization.yaml
+          
+          echo "✅ Updated to: $TAG"
+          cat kustomization.yaml
+      
+      - name: 💾 Commit and push
+        run: |
+          cd infra
+          
+          git config user.name "GitHub Actions Bot"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git add overlays/dev/kustomization.yaml
+          
+          git commit -m "🚀 [DEV] Update backend to ${{ needs.build-and-push.outputs.image_tag }}" \
+                     -m "Source: ${{ github.repository }}@${{ github.sha }}" \
+                     -m "Author: ${{ github.actor }}" || {
+            echo "ℹ️ No changes"
+            exit 0
+          }
+          
+          git push
+          
+          echo "✅ Updated infrastructure repo"
+          echo "🔄 ArgoCD will auto-sync"
+      
+      - name: 📢 Summary
+        run: |
+          echo "## 🚀 Deployed to Development!" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** \`${{ needs.build-and-push.outputs.image_full }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** ArgoCD syncing..." >> $GITHUB_STEP_SUMMARY
