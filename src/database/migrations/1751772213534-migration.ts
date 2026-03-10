@@ -3,7 +3,7 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 export class Migration1751772213534 implements MigrationInterface {
     public async up(queryRunner: QueryRunner): Promise<void> {
         // Insert admin user
-        // password: tuanvu123
+        // user/password: admin/tuanvu123
         // SYSTEM_USER_ID: 00000000-0000-0000-0000-000000000000
         await queryRunner.query(
             `INSERT INTO users (is_staff, is_super_admin, user_name, created_user_id, created_at, password, id)

@@ -12,7 +12,7 @@ export default new DataSource({
     username: configService.get('DB_USERNAME'),
     password: configService.get('DB_PASSWORD'),
     database: configService.get('DB_DATABASE'),
-    entities: [__dirname + '\\entities\\*.entity{.ts,.js}'],
-    subscribers: [__dirname + '\\entity-subscribers\\*.subscriber{.ts,.js}'],
-    migrations: [__dirname + '\\migrations\\*-migration{.ts,.js}'],
+    entities: [__dirname + '/entities/*.entity{.ts,.js}'],
+    subscribers: [__dirname + '/entity-subscribers/*.subscriber{.ts,.js}'],
+    migrations: [__dirname + '/migrations/*-migration{.ts,.js}'],
 });

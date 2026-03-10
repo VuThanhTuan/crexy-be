@@ -4,7 +4,7 @@ export class Migration1762444284575 implements MigrationInterface {
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         // Insert admin user
-        // password: tuanvu123
+        // password: admin@crexy.com/tuanvu123
         // SYSTEM_USER_ID: 00000000-0000-0000-0000-000000000000
         await queryRunner.query(
             `INSERT INTO users (is_staff, is_super_admin, email, fullname, created_user_id, created_at, password, id)
