@@ -10,6 +10,7 @@ import { CategoryModule } from './modules/category/category.module';
 import { DiscountModule } from './modules/discount/discount.module';
 import { CollectionsModule } from './modules/collections/collections.module';
 import { ConfigModule } from '@nestjs/config';
+import { HealthModule } from './modules/health/health.module';
 
 @Module({
     imports: [
@@ -24,7 +25,7 @@ import { ConfigModule } from '@nestjs/config';
         CategoryModule,
         DiscountModule,
         CollectionsModule,
+        HealthModule,
     ],
 })
 export class AppModule {}
-
