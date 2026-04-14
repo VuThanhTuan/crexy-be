@@ -1,8 +1,11 @@
 #!/bin/sh
 set -e
 
+DB_HOST="${DB_HOSTNAME:-postgres}"
+DB_PORT_VALUE="${DB_PORT:-5432}"
+
 echo "Waiting for PostgreSQL to be ready..."
-until nc -z postgres 5432; do
+until nc -z "$DB_HOST" "$DB_PORT_VALUE"; do
   echo "Waiting for database connection..."
   sleep 2
 done
